@@ -145,6 +145,13 @@ add_executable(diffdrive_node
         src/diffdrive_node.cpp
         )
 
+# Make sure messages are generated before build. Fixes non-deterministic build.
+add_dependencies(roboclaw_driver ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(roboclaw_roscore ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(roboclaw_node ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(diffdrive_roscore ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(diffdrive_node ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
+
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
