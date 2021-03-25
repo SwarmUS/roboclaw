@@ -48,6 +48,8 @@ namespace roboclaw {
         last_steps_1 = 0;
         last_steps_2 = 0;
 
+        nh_private.param<std::string>("tf_prefix", tf_prefix, "");
+
         if(!nh_private.getParam("base_width", base_width)){
             throw std::runtime_error("Must specify base_width!");
         }
@@ -143,10 +145,13 @@ namespace roboclaw {
         double cur_y = last_y + delta_y;
         double cur_theta = last_theta + delta_theta;
 
-        nav_msgs::Odometry odom;
+        const std::string odom_frame = tf_prefix + "/odom";
+        const std::string base_frame = tf_prefix + "/base_footprint";
 
-        odom.header.frame_id = "odom";
-        odom.child_frame_id = "base_link";
+        nav_msgs::Odometry odom;
+        
+        odom.header.frame_id = odom_frame;
+        odom.child_frame_id = base_frame;
 
         // Time
         odom.header.stamp = ros::Time::now();
@@ -178,7 +183,7 @@ namespace roboclaw {
         tf::Transform transform;
         transform.setOrigin(tf::Vector3(last_x, last_y, 0.0));
         transform.setRotation(tf::createQuaternionFromRPY(0.0, 0.0, cur_theta));
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "odom", "base_link"));
+        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), odom_frame, base_frame));
 
         odom_pub.publish(odom);
 

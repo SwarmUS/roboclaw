@@ -47,6 +47,8 @@ namespace roboclaw {
         ros::Subscriber twist_sub;
         ros::Subscriber encoder_sub;
 
+        std::string tf_prefix;
+
         int last_steps_1;
         int last_steps_2;
 
