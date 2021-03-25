@@ -24,6 +24,7 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <ros/console.h>
 
 #include "diffdrive_roscore.h"
 #include "roboclaw/RoboclawMotorVelocity.h"
@@ -48,6 +49,7 @@ namespace roboclaw {
         last_steps_1 = 0;
         last_steps_2 = 0;
 
+        // Get ROS parameters
         nh_private.param<std::string>("tf_prefix", tf_prefix, "");
 
         if(!nh_private.getParam("base_width", base_width)){
@@ -56,6 +58,11 @@ namespace roboclaw {
         if(!nh_private.getParam("steps_per_meter", steps_per_meter)) {
             throw std::runtime_error("Must specify steps_per_meter!");
         }
+
+        nh_private.param<double>("max_linear_speed", max_linear_speed, 1000);
+        nh_private.param<double>("max_angular_speed", max_angular_speed, 1000);
+        std::cout<<"Max linear speed: "<< max_linear_speed<<" m/s"<<std::endl;
+        std::cout<<"Max angular speed: "<< max_angular_speed<<" rad/s"<<std::endl;
 
         if(!nh_private.getParam("swap_motors", swap_motors))
             swap_motors = true;
@@ -73,7 +80,6 @@ namespace roboclaw {
         if(!nh_private.getParam("var_theta_z", var_theta_z)){
             var_theta_z = 0.01;
         }
-
     }
 
     void diffdrive_roscore::twist_callback(const geometry_msgs::Twist &msg) {
@@ -84,8 +90,18 @@ namespace roboclaw {
         motor_vel.mot2_vel_sps = 0;
 
         // Linear
-        motor_vel.mot1_vel_sps += (int) (steps_per_meter * msg.linear.x);
-        motor_vel.mot2_vel_sps += (int) (steps_per_meter * msg.linear.x);
+        double linear_speed_x = msg.linear.x;
+        if(linear_speed_x > max_linear_speed){
+            linear_speed_x = max_linear_speed;
+            ROS_WARN_STREAM_THROTTLE(15, "Linear speed clipped at max speed of " << max_linear_speed << " m/s");
+        }
+        else if (linear_speed_x < -max_linear_speed){
+            linear_speed_x = -max_linear_speed;
+            ROS_WARN_STREAM_THROTTLE(15, "Linear speed clipped at min speed of " << -max_linear_speed << " m/s");
+        }
+
+        motor_vel.mot1_vel_sps += (int) (steps_per_meter * linear_speed_x);
+        motor_vel.mot2_vel_sps += (int) (steps_per_meter * linear_speed_x);
 
         if(msg.linear.y > 0){
             motor_vel.mot2_vel_sps += (int) (steps_per_meter * msg.linear.y);
@@ -94,8 +110,18 @@ namespace roboclaw {
         }
 
         // Angular
-        motor_vel.mot1_vel_sps += (int) -(steps_per_meter * msg.angular.z * base_width/2);
-        motor_vel.mot2_vel_sps += (int) (steps_per_meter * msg.angular.z * base_width/2);
+        double angular_speed_z = msg.angular.z;
+        if(angular_speed_z > max_angular_speed){
+            angular_speed_z = max_angular_speed;
+            ROS_WARN_STREAM_THROTTLE(15, "Angular speed clipped at max speed of " << max_angular_speed << " rad/s");
+        }
+        else if (angular_speed_z < -max_angular_speed){
+            angular_speed_z = -max_angular_speed;
+            ROS_WARN_STREAM_THROTTLE(15, "Angular speed clipped at min speed of " << -max_angular_speed << " rad/s");
+        }
+
+        motor_vel.mot1_vel_sps += (int) -(steps_per_meter * angular_speed_z * base_width/2);
+        motor_vel.mot2_vel_sps += (int) (steps_per_meter * angular_speed_z * base_width/2);
 
         if (invert_motor_1)
             motor_vel.mot1_vel_sps = -motor_vel.mot1_vel_sps;
