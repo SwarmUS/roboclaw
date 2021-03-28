@@ -51,6 +51,7 @@ namespace roboclaw {
 
         int last_steps_1;
         int last_steps_2;
+        ros::Time last_time;
 
         double max_linear_speed;    // In m/s. Default: 1000 m/s
         double max_angular_speed;   // In rad/s. Default: 1000 rad/s

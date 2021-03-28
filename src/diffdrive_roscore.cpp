@@ -87,6 +87,8 @@ namespace roboclaw {
         if(!nh_private.getParam("var_theta_z", var_theta_z)){
             var_theta_z = 0.01;
         }
+
+        last_time = ros::Time::now();
     }
 
     void diffdrive_roscore::twist_callback(const geometry_msgs::Twist &msg) {
@@ -191,16 +193,21 @@ namespace roboclaw {
         odom.child_frame_id = base_frame;
 
         // Time
-        odom.header.stamp = ros::Time::now();
+        const ros::Time current_time = ros::Time::now();
+
+        odom.header.stamp = current_time;
+        double dt = current_time.toSec() - last_time.toSec();
+
+        last_time = current_time;
 
         // Position
         odom.pose.pose.position.x = cur_x;
         odom.pose.pose.position.y = cur_y;
 
         // Velocity
-        odom.twist.twist.linear.x = cur_x - last_x;
-        odom.twist.twist.linear.y = cur_y - last_y;
-        odom.twist.twist.angular.z = cur_theta - last_theta;
+        odom.twist.twist.linear.x = (cur_x - last_x)/dt;
+        odom.twist.twist.linear.y = (cur_y - last_y)/dt;
+        odom.twist.twist.angular.z = (cur_theta - last_theta)/dt;
 
         tf::Quaternion quaternion = tf::createQuaternionFromRPY(0.0, 0.0, cur_theta);
         odom.pose.pose.orientation.w = quaternion.w();
