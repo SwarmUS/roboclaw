@@ -49,6 +49,8 @@ namespace roboclaw {
         last_steps_1 = 0;
         last_steps_2 = 0;
 
+        double max_linear_acceleration = 0;
+
         // Get ROS parameters
         nh_private.param<std::string>("tf_prefix", tf_prefix, "");
 
@@ -60,9 +62,14 @@ namespace roboclaw {
         }
 
         nh_private.param<double>("max_linear_speed", max_linear_speed, 1000);
+        ROS_INFO_STREAM("Max linear speed: " << max_linear_speed << " m/s");
+        
         nh_private.param<double>("max_angular_speed", max_angular_speed, 1000);
-        std::cout<<"Max linear speed: "<< max_linear_speed<<" m/s"<<std::endl;
-        std::cout<<"Max angular speed: "<< max_angular_speed<<" rad/s"<<std::endl;
+        ROS_INFO_STREAM("Max angular speed: "<< max_angular_speed << " rad/s");
+
+        nh_private.param<double>("max_linear_acceleration", max_linear_acceleration, 1000);
+        linear_acceleration = max_linear_acceleration*steps_per_meter;
+        ROS_INFO_STREAM("Max linear acceleration: " << max_linear_acceleration << " m/s^2");
 
         if(!nh_private.getParam("swap_motors", swap_motors))
             swap_motors = true;
@@ -88,8 +95,12 @@ namespace roboclaw {
         motor_vel.index = 0;
         motor_vel.mot1_vel_sps = 0;
         motor_vel.mot2_vel_sps = 0;
+        motor_vel.acceleration = 0;
 
-        // Linear
+        // Linear acceleration
+        motor_vel.acceleration = linear_acceleration;
+
+        // Linear speed
         double linear_speed_x = msg.linear.x;
         if(linear_speed_x > max_linear_speed){
             linear_speed_x = max_linear_speed;

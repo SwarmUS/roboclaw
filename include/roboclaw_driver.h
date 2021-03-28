@@ -46,6 +46,8 @@ namespace roboclaw {
 
         void set_velocity(unsigned char address, std::pair<int, int> speed);
 
+        void set_velocity_and_acceleration(const unsigned char address, const uint32_t acceleration , const std::pair<int, int> speed);
+
         void set_duty(unsigned char address, std::pair<int, int> duty);
 
         void reset_encoders(unsigned char address);

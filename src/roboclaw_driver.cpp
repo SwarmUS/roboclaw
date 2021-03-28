@@ -225,6 +225,29 @@ namespace roboclaw {
         txrx(address, 37, tx_buffer, sizeof(tx_buffer), rx_buffer, sizeof(rx_buffer), true, false);
     }
 
+    void driver::set_velocity_and_acceleration(const unsigned char address, const uint32_t acceleration ,const std::pair<int, int> speed) {
+        unsigned char rx_buffer[1];
+        unsigned char tx_buffer[12];
+
+        // RoboClaw expects big endian / MSB first
+        tx_buffer[0] = (unsigned char) ((acceleration >> 24) & 0xFF);
+        tx_buffer[1] = (unsigned char) ((acceleration >> 16) & 0xFF);
+        tx_buffer[2] = (unsigned char) ((acceleration >> 8) & 0xFF);
+        tx_buffer[3] = (unsigned char) (acceleration & 0xFF);
+
+        tx_buffer[4] = (unsigned char) ((speed.first >> 24) & 0xFF);
+        tx_buffer[5] = (unsigned char) ((speed.first >> 16) & 0xFF);
+        tx_buffer[6] = (unsigned char) ((speed.first >> 8) & 0xFF);
+        tx_buffer[7] = (unsigned char) (speed.first & 0xFF);
+
+        tx_buffer[8] = (unsigned char) ((speed.second >> 24) & 0xFF);
+        tx_buffer[9] = (unsigned char) ((speed.second >> 16) & 0xFF);
+        tx_buffer[10] = (unsigned char) ((speed.second >> 8) & 0xFF);
+        tx_buffer[11] = (unsigned char) (speed.second & 0xFF);
+
+        txrx(address, 40, tx_buffer, sizeof(tx_buffer), rx_buffer, sizeof(rx_buffer), true, false);
+    }
+
     void driver::set_duty(unsigned char address, std::pair<int, int> duty) {
         unsigned char rx_buffer[1];
         unsigned char tx_buffer[4];
