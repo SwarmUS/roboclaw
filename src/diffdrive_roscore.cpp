@@ -154,7 +154,7 @@ namespace roboclaw {
         // Publish the corrected cmd_vel used to calculated motor command
         geometry_msgs::Twist filtered_twist;
         filtered_twist.linear.x = linear_speed_x;
-        filtered_twist.linear.x = msg.linear.y;
+        filtered_twist.linear.y = msg.linear.y;
         filtered_twist.angular.z = angular_speed_z;
 
         cmd_vel_filtered_pub.publish(filtered_twist);
