@@ -43,6 +43,7 @@ namespace roboclaw {
 
         ros::Publisher odom_pub;
         ros::Publisher motor_pub;
+        ros::Publisher cmd_vel_filtered_pub;
 
         ros::Subscriber twist_sub;
         ros::Subscriber encoder_sub;

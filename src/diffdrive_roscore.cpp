@@ -41,6 +41,7 @@ namespace roboclaw {
 
         odom_pub = nh.advertise<nav_msgs::Odometry>(std::string("odom"), 10);
         motor_pub = nh.advertise<roboclaw::RoboclawMotorVelocity>(std::string("motor_cmd_vel"), 10);
+        cmd_vel_filtered_pub = nh.advertise<geometry_msgs::Twist>(std::string("cmd_vel_filtered"), 10);
 
         encoder_sub = nh.subscribe(std::string("motor_enc"), 10, &diffdrive_roscore::encoder_callback, this);
         twist_sub = nh.subscribe(std::string("cmd_vel"), 10, &diffdrive_roscore::twist_callback, this);
@@ -149,6 +150,14 @@ namespace roboclaw {
         }
 
         motor_pub.publish(motor_vel);
+
+        // Publish the corrected cmd_vel used to calculated motor command
+        geometry_msgs::Twist filtered_twist;
+        filtered_twist.linear.x = linear_speed_x;
+        filtered_twist.linear.x = msg.linear.y;
+        filtered_twist.angular.z = angular_speed_z;
+
+        cmd_vel_filtered_pub.publish(filtered_twist);
     }
 
     void diffdrive_roscore::encoder_callback(const roboclaw::RoboclawEncoderSteps &msg) {
