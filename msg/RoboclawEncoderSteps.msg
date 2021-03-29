@@ -1,3 +1,4 @@
 int32 index
+time time_stamp
 int32 mot1_enc_steps
 int32 mot2_enc_steps

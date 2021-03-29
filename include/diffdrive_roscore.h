@@ -43,12 +43,20 @@ namespace roboclaw {
 
         ros::Publisher odom_pub;
         ros::Publisher motor_pub;
+        ros::Publisher cmd_vel_filtered_pub;
 
         ros::Subscriber twist_sub;
         ros::Subscriber encoder_sub;
 
+        std::string tf_prefix;
+
         int last_steps_1;
         int last_steps_2;
+        ros::Time last_time;
+
+        double max_linear_speed;    // In m/s. Default: 1000 m/s
+        double max_angular_speed;   // In rad/s. Default: 1000 rad/s
+        double linear_acceleration;
 
         double last_x;
         double last_y;

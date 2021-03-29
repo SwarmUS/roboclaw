@@ -24,6 +24,7 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <ros/console.h>
 
 #include "diffdrive_roscore.h"
 #include "roboclaw/RoboclawMotorVelocity.h"
@@ -40,6 +41,7 @@ namespace roboclaw {
 
         odom_pub = nh.advertise<nav_msgs::Odometry>(std::string("odom"), 10);
         motor_pub = nh.advertise<roboclaw::RoboclawMotorVelocity>(std::string("motor_cmd_vel"), 10);
+        cmd_vel_filtered_pub = nh.advertise<geometry_msgs::Twist>(std::string("cmd_vel_filtered"), 10);
 
         encoder_sub = nh.subscribe(std::string("motor_enc"), 10, &diffdrive_roscore::encoder_callback, this);
         twist_sub = nh.subscribe(std::string("cmd_vel"), 10, &diffdrive_roscore::twist_callback, this);
@@ -48,12 +50,27 @@ namespace roboclaw {
         last_steps_1 = 0;
         last_steps_2 = 0;
 
+        double max_linear_acceleration = 0;
+
+        // Get ROS parameters
+        nh_private.param<std::string>("tf_prefix", tf_prefix, "");
+
         if(!nh_private.getParam("base_width", base_width)){
             throw std::runtime_error("Must specify base_width!");
         }
         if(!nh_private.getParam("steps_per_meter", steps_per_meter)) {
             throw std::runtime_error("Must specify steps_per_meter!");
         }
+
+        nh_private.param<double>("max_linear_speed", max_linear_speed, 1000);
+        ROS_INFO_STREAM("Max linear speed: " << max_linear_speed << " m/s");
+        
+        nh_private.param<double>("max_angular_speed", max_angular_speed, 1000);
+        ROS_INFO_STREAM("Max angular speed: "<< max_angular_speed << " rad/s");
+
+        nh_private.param<double>("max_linear_acceleration", max_linear_acceleration, 1000);
+        linear_acceleration = max_linear_acceleration*steps_per_meter;
+        ROS_INFO_STREAM("Max linear acceleration: " << max_linear_acceleration << " m/s^2");
 
         if(!nh_private.getParam("swap_motors", swap_motors))
             swap_motors = true;
@@ -72,6 +89,7 @@ namespace roboclaw {
             var_theta_z = 0.01;
         }
 
+        last_time = ros::Time::now();
     }
 
     void diffdrive_roscore::twist_callback(const geometry_msgs::Twist &msg) {
@@ -80,10 +98,24 @@ namespace roboclaw {
         motor_vel.index = 0;
         motor_vel.mot1_vel_sps = 0;
         motor_vel.mot2_vel_sps = 0;
+        motor_vel.acceleration = 0;
 
-        // Linear
-        motor_vel.mot1_vel_sps += (int) (steps_per_meter * msg.linear.x);
-        motor_vel.mot2_vel_sps += (int) (steps_per_meter * msg.linear.x);
+        // Linear acceleration
+        motor_vel.acceleration = linear_acceleration;
+
+        // Linear speed
+        double linear_speed_x = msg.linear.x;
+        if(linear_speed_x > max_linear_speed){
+            linear_speed_x = max_linear_speed;
+            ROS_WARN_STREAM_THROTTLE(15, "Linear speed clipped at max speed of " << max_linear_speed << " m/s");
+        }
+        else if (linear_speed_x < -max_linear_speed){
+            linear_speed_x = -max_linear_speed;
+            ROS_WARN_STREAM_THROTTLE(15, "Linear speed clipped at min speed of " << -max_linear_speed << " m/s");
+        }
+
+        motor_vel.mot1_vel_sps += (int) (steps_per_meter * linear_speed_x);
+        motor_vel.mot2_vel_sps += (int) (steps_per_meter * linear_speed_x);
 
         if(msg.linear.y > 0){
             motor_vel.mot2_vel_sps += (int) (steps_per_meter * msg.linear.y);
@@ -92,8 +124,18 @@ namespace roboclaw {
         }
 
         // Angular
-        motor_vel.mot1_vel_sps += (int) -(steps_per_meter * msg.angular.z * base_width/2);
-        motor_vel.mot2_vel_sps += (int) (steps_per_meter * msg.angular.z * base_width/2);
+        double angular_speed_z = msg.angular.z;
+        if(angular_speed_z > max_angular_speed){
+            angular_speed_z = max_angular_speed;
+            ROS_WARN_STREAM_THROTTLE(15, "Angular speed clipped at max speed of " << max_angular_speed << " rad/s");
+        }
+        else if (angular_speed_z < -max_angular_speed){
+            angular_speed_z = -max_angular_speed;
+            ROS_WARN_STREAM_THROTTLE(15, "Angular speed clipped at min speed of " << -max_angular_speed << " rad/s");
+        }
+
+        motor_vel.mot1_vel_sps += (int) -(steps_per_meter * angular_speed_z * base_width/2);
+        motor_vel.mot2_vel_sps += (int) (steps_per_meter * angular_speed_z * base_width/2);
 
         if (invert_motor_1)
             motor_vel.mot1_vel_sps = -motor_vel.mot1_vel_sps;
@@ -108,6 +150,14 @@ namespace roboclaw {
         }
 
         motor_pub.publish(motor_vel);
+
+        // Publish the corrected cmd_vel used to calculate motor commands
+        geometry_msgs::Twist filtered_twist;
+        filtered_twist.linear.x = linear_speed_x;
+        filtered_twist.linear.y = msg.linear.y;
+        filtered_twist.angular.z = angular_speed_z;
+
+        cmd_vel_filtered_pub.publish(filtered_twist);
     }
 
     void diffdrive_roscore::encoder_callback(const roboclaw::RoboclawEncoderSteps &msg) {
@@ -143,22 +193,30 @@ namespace roboclaw {
         double cur_y = last_y + delta_y;
         double cur_theta = last_theta + delta_theta;
 
-        nav_msgs::Odometry odom;
+        const std::string odom_frame = tf_prefix + "/odom";
+        const std::string base_frame = tf_prefix + "/base_footprint";
 
-        odom.header.frame_id = "odom";
-        odom.child_frame_id = "base_link";
+        nav_msgs::Odometry odom;
+        
+        odom.header.frame_id = odom_frame;
+        odom.child_frame_id = base_frame;
 
         // Time
-        odom.header.stamp = ros::Time::now();
+        const ros::Time current_time = msg.time_stamp;
+
+        odom.header.stamp = current_time;
+        double dt = current_time.toSec() - last_time.toSec();
+
+        last_time = current_time;
 
         // Position
         odom.pose.pose.position.x = cur_x;
         odom.pose.pose.position.y = cur_y;
 
         // Velocity
-        odom.twist.twist.linear.x = cur_x - last_x;
-        odom.twist.twist.linear.y = cur_y - last_y;
-        odom.twist.twist.angular.z = cur_theta - last_theta;
+        odom.twist.twist.linear.x = (cur_x - last_x)/dt;
+        odom.twist.twist.linear.y = (cur_y - last_y)/dt;
+        odom.twist.twist.angular.z = (cur_theta - last_theta)/dt;
 
         tf::Quaternion quaternion = tf::createQuaternionFromRPY(0.0, 0.0, cur_theta);
         odom.pose.pose.orientation.w = quaternion.w();
@@ -178,7 +236,7 @@ namespace roboclaw {
         tf::Transform transform;
         transform.setOrigin(tf::Vector3(last_x, last_y, 0.0));
         transform.setRotation(tf::createQuaternionFromRPY(0.0, 0.0, cur_theta));
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "odom", "base_link"));
+        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), odom_frame, base_frame));
 
         odom_pub.publish(odom);
 
