@@ -118,10 +118,10 @@ namespace roboclaw {
 
                 RoboclawEncoderSteps enc_steps;
                 enc_steps.index = r;
+                enc_steps.time_stamp = ros::Time::now();
                 enc_steps.mot1_enc_steps = encs.first;
                 enc_steps.mot2_enc_steps = encs.second;
                 encoder_pub.publish(enc_steps);
-
             }
 
             if (ros::Time::now() - last_message > ros::Duration(5)) {
