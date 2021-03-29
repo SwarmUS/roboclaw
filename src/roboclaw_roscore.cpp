@@ -93,7 +93,10 @@ namespace roboclaw {
 
         last_message = ros::Time::now();
 
-        ros::Rate update_rate(10);
+        double publish_frequency = 10; // Default value: 10 Hz
+        nh_private.getParam("publish_frequency", publish_frequency);
+
+        ros::Rate update_rate(publish_frequency);
 
         while (ros::ok()) {
 
