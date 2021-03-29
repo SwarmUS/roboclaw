@@ -161,7 +161,8 @@ namespace roboclaw {
     }
 
     void diffdrive_roscore::encoder_callback(const roboclaw::RoboclawEncoderSteps &msg) {
-
+        const ros::Time current_time = ros::Time::now();
+        
         static tf::TransformBroadcaster br;
 
         int delta_1 = msg.mot1_enc_steps - last_steps_1;
@@ -202,8 +203,6 @@ namespace roboclaw {
         odom.child_frame_id = base_frame;
 
         // Time
-        const ros::Time current_time = ros::Time::now();
-
         odom.header.stamp = current_time;
         double dt = current_time.toSec() - last_time.toSec();
 
