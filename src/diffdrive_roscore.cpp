@@ -62,6 +62,8 @@ namespace roboclaw {
             throw std::runtime_error("Must specify steps_per_meter!");
         }
 
+        nh_private.param<bool>("publish_tf", publish_tf, true);
+
         nh_private.param<double>("max_linear_speed", max_linear_speed, 1000);
         ROS_INFO_STREAM("Max linear speed: " << max_linear_speed << " m/s");
         
@@ -232,11 +234,13 @@ namespace roboclaw {
 
         // Theta_z Variance
         odom.pose.covariance[35] = var_theta_z;
-
-        tf::Transform transform;
-        transform.setOrigin(tf::Vector3(last_x, last_y, 0.0));
-        transform.setRotation(tf::createQuaternionFromRPY(0.0, 0.0, cur_theta));
-        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), odom_frame, base_frame));
+        
+        if (publish_tf){
+            tf::Transform transform;
+            transform.setOrigin(tf::Vector3(last_x, last_y, 0.0));
+            transform.setRotation(tf::createQuaternionFromRPY(0.0, 0.0, cur_theta));
+            br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), odom_frame, base_frame));
+        }
 
         odom_pub.publish(odom);
 

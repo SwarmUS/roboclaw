@@ -50,6 +50,8 @@ namespace roboclaw {
 
         std::string tf_prefix;
 
+        bool publish_tf;
+
         int last_steps_1;
         int last_steps_2;
         ros::Time last_time;
