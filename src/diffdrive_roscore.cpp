@@ -41,7 +41,7 @@ namespace roboclaw {
 
         odom_pub = nh.advertise<nav_msgs::Odometry>(std::string("odom"), 10);
         motor_pub = nh.advertise<roboclaw::RoboclawMotorVelocity>(std::string("motor_cmd_vel"), 10);
-        cmd_vel_filtered_pub = nh.advertise<geometry_msgs::Twist>(std::string("cmd_vel_filtered"), 10);
+        cmd_vel_filtered_pub = nh.advertise<geometry_msgs::Twist>(std::string("cmd_vel/filtered"), 10);
 
         encoder_sub = nh.subscribe(std::string("motor_enc"), 10, &diffdrive_roscore::encoder_callback, this);
         twist_sub = nh.subscribe(std::string("cmd_vel"), 10, &diffdrive_roscore::twist_callback, this);
