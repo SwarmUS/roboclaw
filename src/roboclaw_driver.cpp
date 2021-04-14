@@ -266,6 +266,11 @@ namespace roboclaw {
     }
 
     void driver::set_duty(unsigned char address, std::pair<int, int> duty) {
+        
+        if (is_motor_cmd_blocked()) {
+            return;
+        }
+        
         unsigned char rx_buffer[1];
         unsigned char tx_buffer[4];
 
