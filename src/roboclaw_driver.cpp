@@ -61,11 +61,6 @@ namespace roboclaw {
     }
 
     void driver::set_motor_cmd_block(bool value) {
-        if (!value) {
-
-        }
-
-
         boost::mutex::scoped_lock lock(motor_cmd_blocker_mutex);
         motor_cmd_blocker = value;
     }
