@@ -109,7 +109,7 @@ namespace roboclaw {
                 try {
                     encs = roboclaw->get_encoders(roboclaw_mapping[r]);
 
-                    // Autorise motor command to be sent
+                    // Autorise motor commands to be sent
                     roboclaw->set_motor_cmd_block(false);
 
                 } catch(roboclaw::crc_exception &e){
@@ -121,7 +121,7 @@ namespace roboclaw {
                     try {
                         if (!roboclaw->is_motor_cmd_blocked())
                         {
-                            // Stops motor
+                            // Stop motors
                             roboclaw->set_duty(roboclaw_mapping[r], std::pair<int, int>(0, 0));    
                         }
                     }

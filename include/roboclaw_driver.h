@@ -108,7 +108,7 @@ namespace roboclaw {
     static inline void trim(std::string &s) {
         ltrim(s);
         rtrim(s);
-    }    
+    }
 }
 
 
