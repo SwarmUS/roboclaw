@@ -108,11 +108,18 @@ namespace roboclaw {
                 std::pair<int, int> encs = std::pair<int, int>(0, 0);
                 try {
                     encs = roboclaw->get_encoders(roboclaw_mapping[r]);
+
+                    // Autorise motor command to be sent
+                    roboclaw->set_motor_cmd_block(false);
+
                 } catch(roboclaw::crc_exception &e){
                     ROS_ERROR("RoboClaw CRC error during getting encoders!");
                     continue;
                 } catch(timeout_exception &e){
                     ROS_ERROR("RoboClaw timout during getting encoders!");
+
+                    // Block motor commands if encoders value are not received
+                    roboclaw->set_motor_cmd_block(true);
                     continue;
                 }
 

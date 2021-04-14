@@ -35,6 +35,8 @@ namespace roboclaw {
     driver::driver(std::string port, unsigned int baudrate) {
         serial = std::shared_ptr<TimeoutSerial>(new TimeoutSerial(port, baudrate));
         serial->setTimeout(boost::posix_time::milliseconds(200));
+
+        motor_cmd_blocker = false;
     }
 
     void driver::crc16_reset() {
@@ -58,13 +60,23 @@ namespace roboclaw {
         return crc;
     }
 
+    void driver::set_motor_cmd_block(bool value) {
+        if (!value) {
+
+        }
+
+
+        boost::mutex::scoped_lock lock(motor_cmd_blocker_mutex);
+        motor_cmd_blocker = value;
+    }
+
     size_t driver::txrx(unsigned char address,
                         unsigned char command,
                         unsigned char *tx_data,
                         size_t tx_length,
                         unsigned char *rx_data,
                         size_t rx_length,
-                        bool tx_crc, bool rx_crc) {
+                        bool tx_crc, bool rx_crc) { 
 
         boost::mutex::scoped_lock lock(serial_mutex);
 
@@ -208,6 +220,11 @@ namespace roboclaw {
     }
 
     void driver::set_velocity(unsigned char address, std::pair<int, int> speed) {
+
+        if (is_motor_cmd_blocked()) {
+            return;
+        }
+
         unsigned char rx_buffer[1];
         unsigned char tx_buffer[8];
 
@@ -226,6 +243,11 @@ namespace roboclaw {
     }
 
     void driver::set_velocity_and_acceleration(const unsigned char address, const uint32_t acceleration ,const std::pair<int, int> speed) {
+        
+        if (is_motor_cmd_blocked()) {
+            return;
+        }
+
         unsigned char rx_buffer[1];
         unsigned char tx_buffer[12];
 
