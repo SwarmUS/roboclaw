@@ -108,11 +108,27 @@ namespace roboclaw {
                 std::pair<int, int> encs = std::pair<int, int>(0, 0);
                 try {
                     encs = roboclaw->get_encoders(roboclaw_mapping[r]);
+
+                    // Autorise motor commands to be sent
+                    roboclaw->set_motor_cmd_block(false);
+
                 } catch(roboclaw::crc_exception &e){
                     ROS_ERROR("RoboClaw CRC error during getting encoders!");
                     continue;
                 } catch(timeout_exception &e){
                     ROS_ERROR("RoboClaw timout during getting encoders!");
+                    
+                    try {
+                        if (!roboclaw->is_motor_cmd_blocked())
+                        {
+                            // Stop motors
+                            roboclaw->set_duty(roboclaw_mapping[r], std::pair<int, int>(0, 0));    
+                        }
+                    }
+                    catch (timeout_exception &e) {
+                        // Timeout is expected again 
+                        roboclaw->set_motor_cmd_block(true);
+                    }
                     continue;
                 }
 
@@ -124,7 +140,7 @@ namespace roboclaw {
                 encoder_pub.publish(enc_steps);
             }
 
-            if (ros::Time::now() - last_message > ros::Duration(5)) {
+            if (ros::Time::now() - last_message > ros::Duration(2)) {
                 for (int r = 0; r < roboclaw_mapping.size(); r++) {
                     try {
                         roboclaw->set_duty(roboclaw_mapping[r], std::pair<int, int>(0, 0));

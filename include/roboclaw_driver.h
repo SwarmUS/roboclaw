@@ -39,6 +39,9 @@ namespace roboclaw {
         driver(std::string port, unsigned int baudrate);
 
         std::string get_version(unsigned char address);
+        
+        void set_motor_cmd_block(bool value);
+        bool is_motor_cmd_blocked();
 
         std::pair<int, int> get_encoders(unsigned char address);
 
@@ -62,6 +65,8 @@ namespace roboclaw {
 
         boost::mutex serial_mutex;
 
+        boost::mutex motor_cmd_blocker_mutex;
+
         uint16_t crc;
 
         uint16_t crc16(uint8_t *packet, size_t nBytes);
@@ -71,6 +76,7 @@ namespace roboclaw {
         size_t txrx(unsigned char address, unsigned char command, unsigned char *tx_data, size_t tx_length,
                     unsigned char *rx_data, size_t rx_length, bool tx_crc = false, bool rx_crc = false);
 
+        bool motor_cmd_blocker;
 
     };
 
@@ -86,6 +92,11 @@ namespace roboclaw {
         }));
     }
 
+    inline bool driver::is_motor_cmd_blocked() {
+        boost::mutex::scoped_lock lock(motor_cmd_blocker_mutex);
+        return motor_cmd_blocker;
+    }
+
 // trim from end (in place)
     static inline void rtrim(std::string &s) {
         s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
@@ -99,4 +110,6 @@ namespace roboclaw {
         rtrim(s);
     }
 }
+
+
 #endif //PROJECT_ROBOCLAWDRIVER_H

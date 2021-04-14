@@ -56,8 +56,6 @@ namespace roboclaw {
 
         void velocity_callback(const roboclaw::RoboclawMotorVelocity &msg);
     };
-
-
 }
 
 #endif //PROJECT_ROBOCLAW_ROSCORE_H
